@@ -1,238 +1,11 @@
-======================================================================
-1. .github/workflows/main.yml (GitHub Actions نىڭ ئوڭشالغان APK ياساش كودى)
-======================================================================
-
-name: Build Android APK
-
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up JDK 11
-        uses: actions/setup-java@v3
-        with:
-          java-version: '11'
-          distribution: 'temurin'
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug
-
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: app-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
-
-
-======================================================================
-2. app/build.gradle
-======================================================================
-
-apply plugin: 'com.android.application'
-
-android {
-    compileSdkVersion 33
-    defaultConfig {
-        applicationId "com.example.bookreader"
-        minSdkVersion 21
-        targetSdkVersion 33
-        versionCode 3
-        versionName "3.0"
-    }
-}
-
-dependencies {
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'com.google.android.material:material:1.8.0'
-    implementation 'com.github.barteksc:android-pdf-viewer:2.8.2'
-    implementation 'androidx.cardview:cardview:1.0.0'
-}
-
-
-======================================================================
-3. app/src/main/AndroidManifest.xml
-======================================================================
-
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.bookreader">
-
-    <uses-permission android:permission="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:permission="android.permission.WRITE_EXTERNAL_STORAGE" />
-
-    <application
-        android:allowBackup="true"
-        android:label="Book Reader"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.NoActionBar">
-
-        <activity
-            android:name=".SplashActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-
-        <activity android:name=".MainActivity" />
-        <activity android:name=".ReaderActivity" />
-    </application>
-
-</manifest>
-
-
-======================================================================
-4. SplashActivity.java (3.5 سېكۇنت كۆرۈنۈپ ئاساسىي بەتكە ئۆتىدۇ)
-======================================================================
-
-package com.example.bookreader;
-
-import android.content.Intent;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import androidx.appcompat.app.AppCompatActivity;
-
-public class SplashActivity extends AppCompatActivity {
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_splash);
-
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            Intent intent = new Intent(SplashActivity.this, MainActivity.class);
-            startActivity(intent);
-            finish();
-        }, 3500);
-    }
-}
-
-
-======================================================================
-5. MainActivity.java (ئاستىنقى تىزىملىك ۋە بۆلۈملەرنى باشقۇرۇش)
-======================================================================
-
-package com.example.bookreader;
-
-import android.os.Bundle;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.Fragment;
-import com.google.android.material.bottomnavigation.BottomNavigationView;
-
-public class MainActivity extends AppCompatActivity {
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        BottomNavigationView bottomNav = findViewById(R.id.bottomNavigation);
-        
-        if (savedInstanceState == null) {
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.fragment_container, new MyBooksFragment())
-                    .commit();
-        }
-
-        bottomNav.setOnItemSelectedListener(item -> {
-            Fragment selectedFragment = null;
-            int itemId = item.getItemId();
-            if (itemId == R.id.nav_my_books) {
-                selectedFragment = new MyBooksFragment();
-            } else if (itemId == R.id.nav_library) {
-                selectedFragment = new LibraryFragment();
-            } else if (itemId == R.id.nav_quran) {
-                selectedFragment = new QuranZikirFragment();
-            }
-
-            if (selectedFragment != null) {
-                getSupportFragmentManager().beginTransaction()
-                        .replace(R.id.fragment_container, selectedFragment)
-                        .commit();
-            }
-            return true;
-        });
-    }
-}
-
-
-======================================================================
-6. MyBooksFragment.java («مېنىڭ» بۆلىكى: كىتاب توپلاملىرى ۋە + كۇنپىكى)
-======================================================================
-
-package com.example.bookreader;
-
-import android.app.AlertDialog;
-import android.os.Bundle;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.EditText;
-import android.widget.Toast;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.fragment.app.Fragment;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-
-public class MyBooksFragment extends Fragment {
-
-    @Nullable
-    @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_my_books, container, false);
-
-        FloatingActionButton fabAdd = view.findViewById(R.id.fabAddCollection);
-        fabAdd.setOnClickListener(v -> showCreateCollectionDialog());
-
-        View cardHistory = view.findViewById(R.id.cardHistory);
-        if (cardHistory != null) {
-            cardHistory.setOnLongClickListener(v -> {
-                Toast.makeText(getContext(), "تۈر رەسىمى ياكى ئىسمىنى ئۆزگەرتىش", Toast.LENGTH_SHORT).show();
-                return true;
-            });
-        }
-
-        return view;
-    }
-
-    private void showCreateCollectionDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setTitle("يېڭى توپلام قۇرۇش");
-        final EditText input = new EditText(getContext());
-        input.setHint("توپلام ئىسمىنى يېزىڭ (مەسىلەن: تارىخىي كىتابلار)");
-        builder.setView(input);
-
-        builder.setPositiveButton("قۇرۇش", (dialog, which) -> {
-            String collectionName = input.getText().toString();
-            if (!collectionName.isEmpty()) {
-                Toast.makeText(getContext(), collectionName + " توپلىمى قۇرۇلدى!", Toast.LENGTH_SHORT).show();
-            }
-        });
-        builder.setNegativeButton("ۋاز كەچتىم", (dialog, which) -> dialog.cancel());
+        builder.setNegativeButton("Û‹Ø§Ø² ÙƒÛ•Ú†ØªÙ‰Ù…", (dialog, which) -> dialog.cancel());
         builder.show();
     }
 }
 
 
 ======================================================================
-7. LibraryFragment.java («كۇتۇپخانا» بۆلىكى: ئىچكى ساقلىغۇچنى سىكانىرلاش)
+7. LibraryFragment.java (Â«ÙƒÛ‡ØªÛ‡Ù¾Ø®Ø§Ù†Ø§Â» Ø¨Û†Ù„Ù‰ÙƒÙ‰: Ø¦Ù‰Ú†ÙƒÙ‰ Ø³Ø§Ù‚Ù„Ù‰ØºÛ‡Ú†Ù†Ù‰ Ø³Ù‰ÙƒØ§Ù†Ù‰Ø±Ù„Ø§Ø´ Û‹Û• Ø¨ÛØ³Ù‰Ù¾ ØªÛ‡Ø±Û‡Ù¾ ÙƒÙ‰Ø±Ú¯ÛˆØ²ÛˆØ´)
 ======================================================================
 
 package com.example.bookreader;
@@ -254,17 +27,17 @@ public class LibraryFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_library, container, false);
 
-        // تېلېفوندىكى بارلىق PDF, TXT, DOCX لار كۆرۈنىدۇ
-        // بېسىپ تۇرغاندا «مېنىڭ» بۆلىكىگە كىرگۈزۈش كۆزنىكى ئېچىلىدۇ
+        // ØªÛÙ„ÛÙÙˆÙ†Ø¯Ù‰ÙƒÙ‰ Ø¨Ø§Ø±Ù„Ù‰Ù‚ PDF, TXT, DOCX Ù„Ø§Ø± ÙƒÛ†Ø±ÛˆÙ†Ù‰Ø¯Û‡
+        // Ø¨ÛØ³Ù‰Ù¾ ØªÛ‡Ø±ØºØ§Ù†Ø¯Ø§ Â«Ù…ÛÙ†Ù‰Ú­Â» Ø¨Û†Ù„Ù‰ÙƒÙ‰Ú¯Û• ÙƒÙ‰Ø±Ú¯ÛˆØ²ÛˆØ´ ÙƒÛ†Ø²Ù†Ù‰ÙƒÙ‰ Ø¦ÛÚ†Ù‰Ù„Ù‰Ø¯Û‡
         return view;
     }
 
     private void showAddToCollectionDialog(String fileName) {
-        String[] collections = {"تارىخىي كىتابلار", "پەلسەپىۋىي كىتابلار"};
+        String[] collections = {"ØªØ§Ø±Ù‰Ø®Ù‰ÙŠ ÙƒÙ‰ØªØ§Ø¨Ù„Ø§Ø±", "Ù¾Û•Ù„Ø³Û•Ù¾Ù‰Û‹Ù‰ÙŠ ÙƒÙ‰ØªØ§Ø¨Ù„Ø§Ø±"};
         AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setTitle("توپلامغا كىرگۈزۈش");
+        builder.setTitle("ØªÙˆÙ¾Ù„Ø§Ù…ØºØ§ ÙƒÙ‰Ø±Ú¯ÛˆØ²ÛˆØ´");
         builder.setItems(collections, (dialog, which) -> {
-            Toast.makeText(getContext(), fileName + " -> " + collections[which] + " غا كىرگۈزۈلدى", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), fileName + " -> " + collections[which] + " ØºØ§ ÙƒÙ‰Ø±Ú¯ÛˆØ²ÛˆÙ„Ø¯Ù‰", Toast.LENGTH_SHORT).show();
         });
         builder.show();
     }
@@ -272,7 +45,7 @@ public class LibraryFragment extends Fragment {
 
 
 ======================================================================
-8. QuranZikirFragment.java («قۇرئان ۋە زىكىر» بۆلىكى)
+8. QuranZikirFragment.java (Â«Ù‚Û‡Ø±Ø¦Ø§Ù† Û‹Û• Ø²Ù‰ÙƒÙ‰Ø±Â» Ø¨Û†Ù„Ù‰ÙƒÙ‰)
 ======================================================================
 
 package com.example.bookreader;
@@ -290,14 +63,14 @@ public class QuranZikirFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        // ئېكراندا «بۇ يەر ھازىرچە تولۇقلانمىدى. كېرەكلىك ئىقتىدارلار كېيىنكى نەشرگە قالدۇرۇلدى» دەپ چىقىدۇ
+        // Ø¦ÛÙƒØ±Ø§Ù†Ø¯Ø§ Â«Ø¨Û‡ ÙŠÛ•Ø± Ú¾Ø§Ø²Ù‰Ø±Ú†Û• ØªÙˆÙ„Û‡Ù‚Ù„Ø§Ù†Ù…Ù‰Ø¯Ù‰. ÙƒÛØ±Û•ÙƒÙ„Ù‰Ùƒ Ø¦Ù‰Ù‚ØªÙ‰Ø¯Ø§Ø±Ù„Ø§Ø± ÙƒÛÙŠÙ‰Ù†ÙƒÙ‰ Ù†Û•Ø´Ø±Ú¯Û• Ù‚Ø§Ù„Ø¯Û‡Ø±Û‡Ù„Ø¯Ù‰Â» Ø¯Û•Ù¾ Ú†Ù‰Ù‚Ù‰Ø¯Û‡
         return inflater.inflate(R.layout.fragment_quran_zikir, container, false);
     }
 }
 
 
 ======================================================================
-9. ReaderActivity.java (PDF ئوقۇغۇچ ۋە ئاپتوماتىك بەت ساقلاش)
+9. ReaderActivity.java (PDF Ø¦ÙˆÙ‚Û‡ØºÛ‡Ú† Û‹Û• Ø¦Ø§Ù¾ØªÙˆÙ…Ø§ØªÙ‰Ùƒ Ø¨Û•Øª Ø³Ø§Ù‚Ù„Ø§Ø´)
 ======================================================================
 
 package com.example.bookreader;
