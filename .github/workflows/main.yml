@@ -1,0 +1,106 @@
+        String[] collections = {"ØªØ§Ø±Ù‰Ø®Ù‰ÙŠ ÙƒÙ‰ØªØ§Ø¨Ù„Ø§Ø±", "Ù¾Û•Ù„Ø³Û•Ù¾Ù‰Û‹Ù‰ÙŠ ÙƒÙ‰ØªØ§Ø¨Ù„Ø§Ø±"};
+        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+        builder.setTitle("ØªÙˆÙ¾Ù„Ø§Ù…ØºØ§ ÙƒÙ‰Ø±Ú¯ÛˆØ²ÛˆØ´");
+        builder.setItems(collections, (dialog, which) -> {
+            Toast.makeText(getContext(), fileName + " -> " + collections[which] + " ØºØ§ ÙƒÙ‰Ø±Ú¯ÛˆØ²ÛˆÙ„Ø¯Ù‰", Toast.LENGTH_SHORT).show();
+        });
+        builder.show();
+    }
+}
+```
+
+---
+
+### 7. `QuranZikirFragment.java` (Placeholder Section)
+```java
+package com.example.bookreader;
+
+import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+
+public class QuranZikirFragment extends Fragment {
+
+    @Nullable
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        // Displays: "Ø¨Û‡ ÙŠÛ•Ø± Ú¾Ø§Ø²Ù‰Ø±Ú†Û• ØªÙˆÙ„Û‡Ù‚Ù„Ø§Ù†Ù…Ù‰Ø¯Ù‰. ÙƒÛØ±Û•ÙƒÙ„Ù‰Ùƒ Ø¦Ù‰Ù‚ØªÙ‰Ø¯Ø§Ø±Ù„Ø§Ø± ÙƒÛÙŠÙ‰Ù†ÙƒÙ‰ Ù†Û•Ø´Ø±Ú¯Û• Ù‚Ø§Ù„Ø¯Û‡Ø±Û‡Ù„Ø¯Ù‰."
+        return inflater.inflate(R.layout.fragment_quran_zikir, container, false);
+    }
+}
+```
+
+---
+
+### 8. `ReaderActivity.java` (Exact PDF View & Auto Page Progress Save/Restore)
+```java
+package com.example.bookreader;
+
+import android.content.SharedPreferences;
+import android.net.Uri;
+import android.os.Bundle;
+import androidx.appcompat.app.AppCompatActivity;
+import com.github.barteksc.pdfviewer.PDFView;
+import com.github.barteksc.pdfviewer.listener.OnPageChangeListener;
+
+public class ReaderActivity extends AppCompatActivity implements OnPageChangeListener {
+
+    private static final String PREFS_NAME = "BookProgressPrefs";
+    private PDFView pdfView;
+    private Uri pdfUri;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_reader);
+
+        pdfView = findViewById(R.id.pdfView);
+        
+        if (getIntent().getData() != null) {
+            pdfUri = getIntent().getData();
+            int savedPage = getSavedPageProgress(pdfUri.toString());
+            
+            // Open PDF matching original layout and jumping to exact last saved page
+            pdfView.fromUri(pdfUri)
+                    .defaultPage(savedPage)
+                    .enableSwipe(true)
+                    .enableDoubletap(true)
+                    .enableAntialiasing(true)
+                    .onPageChange(this)
+                    .load();
+        }
+    }
+
+    @Override
+    public void onPageChanged(int page, int pageCount) {
+        if (pdfUri != null) {
+            // Save page automatically as user reads
+            savePageProgress(pdfUri.toString(), page);
+        }
+    }
+
+    private void savePageProgress(String uriKey, int page) {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        prefs.edit().putInt("page_" + uriKey.hashCode(), page).apply();
+    }
+
+    private int getSavedPageProgress(String uriKey) {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+        return prefs.getInt("page_" + uriKey.hashCode(), 0);
+    }
+}
+```
+
+---
+
+## ğŸš€ GitHub Push Commands
+
+```bash
+git add .
+git commit -m "Add Splash screen, My Books, Storage Library picker, and auto page restore"
+git push origin main
+```
